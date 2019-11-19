@@ -1,23 +1,28 @@
 # coding=utf-8
 import argparse
+import os
+import sys
 
 # _____ ARGUMENTS PARSER _______________________________________________________________________________________________
 
 
 parser = argparse.ArgumentParser(
     prog='ass2srt',
-    description='Convert Sub Station Alpha v4.00+ subtitle format (.ass) into SubRip subtitle format (.srt)',
+    description='Convert SubStationAlpha v4.00+ (.ass) into SubRip (.srt)',
     epilog='GitHub Page: https://github.com/locobastos/ass2srt-python'
 )
 
-parser.add_argument('-i', '--input',
-                    metavar="input.ass",
+parser.add_argument('-id', '--input-directory',
+                    type=str,
+                    action='append',
+                    nargs='+',
+                    help='the path to the directory containing all .ass files')
+parser.add_argument('-if', '--input-file',
                     type=str,
                     action='append',
                     nargs='+',
                     help='the path to the input file.')
 parser.add_argument('-c', '--charenc',
-                    metavar="utf-8",
                     type=str,
                     help='the input file\'s characters encoding.')
 args = parser.parse_args()
@@ -53,6 +58,16 @@ def convert_ass_to_srt(in_file, out_file):
 
 # _____ MAiN ___________________________________________________________________________________________________________
 
-for ass_file in range(len(args.input)):
-    output_srt_file = args.input[ass_file][0][:-4] + ".srt"
-    convert_ass_to_srt(args.input[ass_file][0], output_srt_file)
+if not len(sys.argv) == 1:
+    if args.input_file is not None:
+        for ass_file in range(len(args.input_file)):
+            output_srt_file = args.input_file[ass_file][0][:-4] + ".srt"
+            convert_ass_to_srt(args.input_file[ass_file][0], output_srt_file)
+
+    if args.input_directory is not None:
+        for ass_dir in args.input_directory:
+            for ass_file in os.listdir(ass_dir[0]):
+                output_srt_file = ass_dir[0] + ass_file[:-4] + ".srt"
+                convert_ass_to_srt(ass_dir[0] + ass_file, output_srt_file)
+else:
+    parser.print_help()
