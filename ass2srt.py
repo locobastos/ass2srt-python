@@ -1,5 +1,5 @@
-# coding=utf-8
 import argparse
+import cchardet as chardet
 import os
 import sys
 
@@ -22,17 +22,14 @@ parser.add_argument('-if', '--input-file',
                     action='append',
                     nargs='+',
                     help='the path to the input file.')
-parser.add_argument('-c', '--charenc',
-                    type=str,
-                    help='the input file\'s characters encoding.')
 args = parser.parse_args()
 
 
 # _____ FUNCTiONS ______________________________________________________________________________________________________
 
 
-def convert_ass_to_srt(in_file, out_file):
-    with open(in_file, 'r', encoding='utf-8') as infile, open(out_file, 'w', encoding='utf-8') as outfile:
+def convert_ass_to_srt(in_file, out_file, in_char_enc):
+    with open(in_file, 'r', encoding=in_char_enc) as infile, open(out_file, 'w', encoding=in_char_enc) as outfile:
         event_line = False
         dialogue_number = 1
         for line in infile:
@@ -52,22 +49,41 @@ def convert_ass_to_srt(in_file, out_file):
                     outfile.write(tmp_line[1].replace(".", ",") + " --> " + tmp_line[2].replace(".", ",") + '\n')
                     outfile.write(tmp_line[9].replace('\n', '').replace("\\N", '\n') + '\n\n')
                     dialogue_number += 1
-        outfile.close()
-        infile.close()
+    outfile.close()
+    infile.close()
 
 
 # _____ MAiN ___________________________________________________________________________________________________________
 
+
 if not len(sys.argv) == 1:
     if args.input_file is not None:
         for ass_file in range(len(args.input_file)):
-            output_srt_file = args.input_file[ass_file][0][:-4] + ".srt"
-            convert_ass_to_srt(args.input_file[ass_file][0], output_srt_file)
+            ass_filename = args.input_file[ass_file][0]
+            output_srt_file = ass_filename[:-4] + ".srt"
+            if ass_filename.lower().endswith('.ass'):
+                try:
+                    with open(ass_filename, 'rb') as ass_opened_file:
+                        char_enc = chardet.detect(ass_opened_file.read()).get('encoding')
+                    ass_opened_file.close()
+                    convert_ass_to_srt(ass_filename, output_srt_file, char_enc)
+                except EnvironmentError:
+                    print("The file " + ass_filename + " does not exist")
+                    exit(10)
 
     if args.input_directory is not None:
         for ass_dir in args.input_directory:
             for ass_file in os.listdir(ass_dir[0]):
-                output_srt_file = ass_dir[0] + ass_file[:-4] + ".srt"
-                convert_ass_to_srt(ass_dir[0] + ass_file, output_srt_file)
+                ass_filename = ass_dir[0] + ass_file
+                output_srt_file = ass_filename[:-4] + ".srt"
+                if ass_filename.lower().endswith('.ass'):
+                    try:
+                        with open(ass_filename, 'rb') as ass_opened_file:
+                            char_enc = chardet.detect(ass_opened_file.read()).get('encoding')
+                        ass_opened_file.close()
+                        convert_ass_to_srt(ass_filename, output_srt_file, char_enc)
+                    except EnvironmentError:
+                        print("The file " + ass_filename + " does not exist")
+                        exit(10)
 else:
     parser.print_help()
