@@ -34,39 +34,47 @@ style_list = []
 # _____ FUNCTiONS ______________________________________________________________________________________________________
 
 
-def convert_ass_to_srt(in_file, out_file, in_char_enc):
-    with open(in_file, 'r', encoding=in_char_enc) as infile, open(out_file, 'w', encoding=in_char_enc) as outfile:
-        # As I'm doing a loop over each lines, event_line is used to know if we have reach the [Events] section or not
-        event_line = False
-        dialogue_number = 1  # the number indicating which subtitle it is in the sequence.
-        for line in infile:
-            if not event_line:
-                """
-                Removes the [Script Info] and [V4+ Styles] headers
-                + The Format line on the [Events] section
-                """
-                if line.startswith("Style: "):
-                    splitted_line = line.split(",")
-                    stylename = splitted_line[0]
-                    if stylename not in style_list:
-                        style_list.append(stylename)
-                    fontname = splitted_line[1]
-                    if fontname not in fonts_name_list:
-                        fonts_name_list.append(fontname)
-                if line.startswith("Format: Layer"):
-                    event_line = True
-            else:
-                """
-                We are now on the Dialogue lines
-                """
-                if line not in ['\n', '\r\n'] or len(line.strip()) != 0:
-                    outfile.write(str(dialogue_number) + '\n')
-                    tmp_line = line.split(",", 9)
-                    outfile.write(tmp_line[1].replace(".", ",") + " --> " + tmp_line[2].replace(".", ",") + '\n')
-                    outfile.write(remove_ass_tags(tmp_line[9]))
-                    dialogue_number += 1
-    outfile.close()
-    infile.close()
+def convert_ass_to_srt(ass_filename):
+    output_srt_file = ass_filename[:-4] + ".srt"
+    if ass_filename.lower().endswith('.ass'):
+        try:
+            with open(ass_filename, 'rb') as ass_opened_file:
+                char_enc = cchardet.detect(ass_opened_file.read()).get('encoding')
+            with open(ass_filename, 'r', encoding=char_enc) as infile, open(output_srt_file, 'w', encoding=char_enc) as outfile:
+                # I'm doing a loop over each lines, event_line is used to know if we have reach the [Events] section
+                event_line = False
+                dialogue_number = 1  # the number indicating which subtitle it is in the sequence.
+                for line in infile:
+                    if not event_line:
+                        """
+                        Removes the [Script Info] and [V4+ Styles] headers
+                        + The Format line on the [Events] section
+                        """
+                        if line.startswith("Style: "):
+                            split_line = line.split(",")
+                            style_name = split_line[0]
+                            if style_name not in style_list:
+                                style_list.append(style_name)
+                            font_name = split_line[1]
+                            if font_name not in fonts_name_list:
+                                fonts_name_list.append(font_name)
+                        if line.startswith("Format: Layer"):
+                            event_line = True
+                    else:
+                        """
+                        We are now on the Dialogue lines
+                        """
+                        if line not in ['\n', '\r\n'] or len(line.strip()) != 0:
+                            outfile.write(str(dialogue_number) + '\n')
+                            tmp_line = line.split(",", 9)
+                            outfile.write(tmp_line[1].replace(".", ",") + " --> " + tmp_line[2].replace(".", ",") + '\n')
+                            outfile.write(remove_ass_tags(tmp_line[9]))
+                            dialogue_number += 1
+            outfile.close()
+            infile.close()
+        except EnvironmentError:
+            print("The file " + ass_filename + " does not exist")
+            exit(10)
 
 
 def remove_ass_tags(str_input):
@@ -143,32 +151,11 @@ def remove_ass_tags(str_input):
 if not len(sys.argv) == 1:
     if args.input_file is not None:
         for ass_file in range(len(args.input_file)):
-            ass_filename = args.input_file[ass_file][0]
-            output_srt_file = ass_filename[:-4] + ".srt"
-            if ass_filename.lower().endswith('.ass'):
-                try:
-                    with open(ass_filename, 'rb') as ass_opened_file:
-                        char_enc = cchardet.detect(ass_opened_file.read()).get('encoding')
-                    ass_opened_file.close()
-                    convert_ass_to_srt(ass_filename, output_srt_file, char_enc)
-                    print(fonts_name_list)
-                except EnvironmentError:
-                    print("The file " + ass_filename + " does not exist")
-                    exit(10)
+            convert_ass_to_srt(args.input_file[ass_file][0])
 
     if args.input_directory is not None:
         for ass_dir in args.input_directory:
             for ass_file in os.listdir(ass_dir[0]):
-                ass_filename = ass_dir[0] + ass_file
-                output_srt_file = ass_filename[:-4] + ".srt"
-                if ass_filename.lower().endswith('.ass'):
-                    try:
-                        with open(ass_filename, 'rb') as ass_opened_file:
-                            char_enc = cchardet.detect(ass_opened_file.read()).get('encoding')
-                        ass_opened_file.close()
-                        convert_ass_to_srt(ass_filename, output_srt_file, char_enc)
-                    except EnvironmentError:
-                        print("The file " + ass_filename + " does not exist")
-                        exit(10)
+                convert_ass_to_srt(ass_dir[0] + ass_file)
 else:
     parser.print_help()
